@@ -1,0 +1,220 @@
+# Elasticsearch API Tests for Visual Studio Code REST Client
+# Install the REST Client extension to use this file
+
+@baseUrl = http://localhost:8001/api
+
+### Health Check
+GET {{baseUrl}}/
+
+### Elasticsearch Health Check
+GET {{baseUrl}}/elasticsearch/health
+
+### Create Indices
+POST {{baseUrl}}/elasticsearch/indices/create
+Content-Type: application/json
+
+### ========================================
+### PRODUCTION ORDERS
+### ========================================
+
+### Create Production Order
+POST {{baseUrl}}/elasticsearch/production-orders
+Content-Type: application/json
+
+{
+    "data": {
+        "id": 90,
+        "identity_number": "2251030001",
+        "product_code": "7200-TJ104",
+        "customer_id": 65,
+        "product_work_center_id": 6,
+        "shift_id": 2,
+        "planning_date": "2025-10-30",
+        "qty": 100,
+        "overtime": 0,
+        "plant_id": 2,
+        "standard_packing_qty": 5,
+        "status_id": 4,
+        "created_by": 9,
+        "modified_by": 9,
+        "created_at": "2025-10-30T04:10:19.000000Z",
+        "updated_at": "2025-10-30T08:48:43.000000Z",
+        "actual_qty": {
+            "uom": "PCE",
+            "station": {
+                "start": "WH_WASUREMBO",
+                "finish": "WH_VISUAL_INSPECTION_2"
+            },
+            "WH_WASUREMBO": 5,
+            "WH_JIG_REPORT": 1,
+            "WH_VISUAL_INSPECTION_1": 0,
+            "WH_CHECKER": 0,
+            "WH_VISUAL_INSPECTION_2": 0
+        },
+        "traceabilities": [
+            {
+                "id": 835,
+                "model_type": "App\\Models\\Nameplate",
+                "model_id": 602,
+                "station_id": 12,
+                "user_id": 9,
+                "content": {
+                    "tool_id": 3
+                },
+                "status_id": 1,
+                "created_at": "2025-10-30T08:49:41.000000Z",
+                "updated_at": "2025-10-30T08:49:41.000000Z"
+            }
+        ],
+        "customer": {
+            "id": 65,
+            "external_code": "119920",
+            "customer": "AJI",
+            "description": "PT. ASTRA JUOKU INDONESIA"
+        },
+        "plant": {
+            "id": 2,
+            "plant": "1502",
+            "description": "PLANT 2 CIREBON"
+        },
+        "status": {
+            "id": 4,
+            "flag": "ORDER_PROGRESS",
+            "status": "ON PROGRESS"
+        }
+    }
+}
+
+### Get Production Order by ID
+GET {{baseUrl}}/elasticsearch/production-orders/90
+
+### List All Production Orders
+GET {{baseUrl}}/elasticsearch/production-orders?size=100
+
+### Update Production Order
+PUT {{baseUrl}}/elasticsearch/production-orders/90
+Content-Type: application/json
+
+{
+    "data": {
+        "qty": 150,
+        "updated_at": "2025-10-31T10:00:00.000000Z"
+    }
+}
+
+### Delete Production Order
+DELETE {{baseUrl}}/elasticsearch/production-orders/90
+
+### ========================================
+### TRACEABILITIES
+### ========================================
+
+### Create Traceability
+POST {{baseUrl}}/elasticsearch/traceabilities
+Content-Type: application/json
+
+{
+    "data": {
+        "id": 835,
+        "model_type": "App\\Models\\Nameplate",
+        "model_id": 602,
+        "station_id": 12,
+        "user_id": 9,
+        "content": {
+            "tool_id": 3
+        },
+        "status_id": 1,
+        "production_order_id": 90,
+        "created_at": "2025-10-30T08:49:41.000000Z",
+        "updated_at": "2025-10-30T08:49:41.000000Z",
+        "station": {
+            "id": 12,
+            "work_center_id": 3,
+            "flag": "WH_JIG_REPORT",
+            "station": "JIG Report"
+        },
+        "status": {
+            "id": 1,
+            "flag": "WH_OK",
+            "status": "OK"
+        }
+    }
+}
+
+### Get Traceability by ID
+GET {{baseUrl}}/elasticsearch/traceabilities/835
+
+### List All Traceabilities
+GET {{baseUrl}}/elasticsearch/traceabilities?size=100
+
+### ========================================
+### NAMEPLATES
+### ========================================
+
+### Create Nameplate
+POST {{baseUrl}}/elasticsearch/nameplates
+Content-Type: application/json
+
+{
+    "data": {
+        "id": 607,
+        "flag": "WH",
+        "production_order_id": 91,
+        "identity_number": "PR;2251031001-0001",
+        "shift_id": 2,
+        "user_id": 9,
+        "product_work_center_id": 6,
+        "station_id": 10,
+        "created_at": "2025-10-31T01:33:40.000000Z",
+        "updated_at": "2025-10-31T01:33:40.000000Z"
+    }
+}
+
+### Get Nameplate by ID
+GET {{baseUrl}}/elasticsearch/nameplates/607
+
+### List All Nameplates
+GET {{baseUrl}}/elasticsearch/nameplates?size=100
+
+### ========================================
+### SEARCH OPERATIONS
+### ========================================
+
+### Generic Search
+POST {{baseUrl}}/elasticsearch/search
+Content-Type: application/json
+
+{
+    "query": "AJI",
+    "index": "production_orders_v1",
+    "size": 10
+}
+
+### Search by Identity Number
+GET {{baseUrl}}/elasticsearch/search/production-orders/by-identity/2251030001
+
+### Search by Customer ID
+GET {{baseUrl}}/elasticsearch/search/production-orders/by-customer/65
+
+### Search by Station ID (Nested Query)
+GET {{baseUrl}}/elasticsearch/search/production-orders/by-station/12
+
+### Search in Traceabilities Index
+POST {{baseUrl}}/elasticsearch/search
+Content-Type: application/json
+
+{
+    "query": "WH_JIG_REPORT",
+    "index": "traceabilities_v1",
+    "size": 10
+}
+
+### Search in Nameplates Index
+POST {{baseUrl}}/elasticsearch/search
+Content-Type: application/json
+
+{
+    "query": "PR;2251031001-0001",
+    "index": "nameplates_v1",
+    "size": 10
+}
