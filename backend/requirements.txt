@@ -15,8 +15,8 @@ click==8.3.0
 cryptography==46.0.3
 dnspython==2.8.0
 ecdsa==0.19.1
-elastic-transport==9.2.0
-elasticsearch==9.2.0
+elastic-transport==8.17.1
+elasticsearch==8.19.2
 email-validator==2.3.0
 fastapi==0.110.1
 flake8==7.3.0
