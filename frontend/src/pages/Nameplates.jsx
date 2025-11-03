@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, FileText, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import moment from "moment";
+import "moment/locale/id";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -74,47 +76,56 @@ const Nameplates = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {nameplates.map((nameplate, index) => (
-              <Card
-                key={nameplate.id || index}
-                className="border-2 hover:shadow-xl transition-all duration-300"
-                data-testid={`nameplate-card-${nameplate.id}`}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-xl mb-2">{nameplate.identity_number}</CardTitle>
-                      <CardDescription className="text-base">Flag: {nameplate.flag}</CardDescription>
-                    </div>
-                    <Badge variant="outline" className="text-sm">
-                      ID: {nameplate.id}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">Production Order:</span>
-                      <span className="font-semibold text-slate-800">{nameplate.production_order_id}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">Station ID:</span>
-                      <span className="font-semibold text-slate-800">{nameplate.station_id}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">User ID:</span>
-                      <span className="font-semibold text-slate-800">{nameplate.user_id}</span>
-                    </div>
-                    {nameplate.shift_id && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Shift ID:</span>
-                        <span className="font-semibold text-slate-800">{nameplate.shift_id}</span>
+            {nameplates.map((nameplate, index) => {
+                let created_at = moment(nameplate.created_at).locale('id').format("DD MMM YYYY HH:mm:ss");
+
+                return (
+                  <Card
+                    key={nameplate.id || index}
+                    className="border-2 hover:shadow-xl transition-all duration-300"
+                    data-testid={`nameplate-card-${nameplate.id}`}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-xl mb-2">{nameplate.identity_number}</CardTitle>
+                          <CardDescription className="text-base">Flag: {nameplate.flag}</CardDescription>
+                        </div>
+                        <Badge variant="outline" className="text-sm">
+                          ID: {nameplate.id}
+                        </Badge>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Created:</span>
+                          <span className="font-semibold text-slate-800">{created_at}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Production Order:</span>
+                          <span className="font-semibold text-slate-800">{nameplate.production_order_id}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Station ID:</span>
+                          <span className="font-semibold text-slate-800">{nameplate.station_id}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">User ID:</span>
+                          <span className="font-semibold text-slate-800">{nameplate.user_id}</span>
+                        </div>
+                        {nameplate.shift_id && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Shift ID:</span>
+                            <span className="font-semibold text-slate-800">{nameplate.shift_id}</span>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              }
+            )}
           </div>
         )}
       </div>

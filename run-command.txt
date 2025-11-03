@@ -1,0 +1,7 @@
+RUN Backend FastAPI
+1. cd backend
+2. uvicorn server:app --port 8010 --reload
+
+RUN frontend ReactApp
+1. cd frontend
+2. yarn start

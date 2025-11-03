@@ -115,7 +115,7 @@ const ProductionOrders = () => {
                     {order.status && (
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600">Status:</span>
-                        <Badge className="bg-gradient-to-r from-orange-500 to-orange-600">
+                        <Badge style={{ backgroundColor: order.status.bg_color }}>
                           {order.status.status}
                         </Badge>
                       </div>

@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Activity, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import moment from "moment";
+import "moment/locale/id";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -74,55 +76,61 @@ const Traceabilities = () => {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {traces.map((trace, index) => (
-              <Card
-                key={trace.id || index}
-                className="border-2 hover:shadow-xl transition-all duration-300"
-                data-testid={`trace-card-${trace.id}`}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-xl mb-2">Trace #{trace.id}</CardTitle>
-                      <CardDescription className="text-base">
-                        {trace.model_type?.split('\\').pop()}
-                      </CardDescription>
-                    </div>
-                    <Badge variant="outline" className="text-sm">
-                      Model: {trace.model_id}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">Station ID:</span>
-                      <span className="font-semibold text-slate-800">{trace.station_id}</span>
-                    </div>
-                    {trace.station && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Station:</span>
-                        <span className="font-semibold text-slate-800">{trace.station.station}</span>
-                      </div>
-                    )}
-                    {trace.status && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">Status:</span>
-                        <Badge className="bg-gradient-to-r from-green-500 to-green-600">
-                          {trace.status.status}
+            {traces.map((trace, index) => {
+                let created_at = moment(trace.created_at).locale('id').format("DD MMM YYYY HH:mm:ss");
+
+                return (
+                  <Card
+                    key={trace.id || index}
+                    className="border-2 hover:shadow-xl transition-all duration-300"
+                    data-testid={`trace-card-${trace.id}`}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-xl mb-2">Trace #{trace.id}</CardTitle>
+                          <CardDescription className="text-base">
+                            {/* {trace.model_type?.split('\\').pop()} */}
+                            {created_at}
+                          </CardDescription>
+                        </div>
+                        <Badge variant="outline" className="text-sm">
+                          Model: {trace.model_id}
                         </Badge>
                       </div>
-                    )}
-                    {trace.user_id && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">User ID:</span>
-                        <span className="font-semibold text-slate-800">{trace.user_id}</span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Station ID:</span>
+                          <span className="font-semibold text-slate-800">{trace.station_id}</span>
+                        </div>
+                        {trace.station && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Station:</span>
+                            <span className="font-semibold text-slate-800">{trace.station.station}</span>
+                          </div>
+                        )}
+                        {trace.status && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Status:</span>
+                            <Badge style={{ backgroundColor: trace.status.bg_color }}>
+                              {trace.status.status}
+                            </Badge>
+                          </div>
+                        )}
+                        {trace.user_id && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">User ID:</span>
+                            <span className="font-semibold text-slate-800">{trace.user_id}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                )
+              }
+            )}
           </div>
         )}
       </div>

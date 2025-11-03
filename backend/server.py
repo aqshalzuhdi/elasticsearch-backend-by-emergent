@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -10,7 +11,6 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Dict, Any, Optional
 import uuid
 from datetime import datetime, timezone
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,7 +29,6 @@ app = FastAPI()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
-
 
 # Define Models
 class StatusCheck(BaseModel):
@@ -55,6 +54,13 @@ class NameplateCreate(BaseModel):
 class SearchQuery(BaseModel):
     query: str
     index: str = "production_orders_v1"
+    size: int = 10
+
+class ProductionOrderActive(BaseModel):
+    shift_id: int
+    station_flag: Optional[str] = None
+    user_id: Optional[int] = None
+    planning_dates: Any
     size: int = 10
 
 # Add your routes to the router instead of directly to app
@@ -142,10 +148,77 @@ async def create_indices():
                     "customer": {"type": "object", "enabled": True},
                     "plant": {"type": "object", "enabled": True},
                     "shift": {"type": "object", "enabled": True},
-                    "product_work_center": {"type": "object", "enabled": True},
+                    # "product_work_center": {"type": "object", "enabled": True},
+                    "product_work_center": {
+                        # "type": "nested",
+                        "properties": {
+                            "id": {"type": "integer"},
+                            "work_center_id": {"type": "integer"},
+                            "product_id": {"type": "integer"},
+                            "status": {"type": "integer"},
+                            "created_by": {"type": "integer"},
+                            "modified_by": {"type": "integer"},
+                            "created_at": {"type": "date"},
+                            "updated_at": {"type": "date"},
+                            "deleted_at": {"type": "date"},
+                            "product": {"type": "object", "enabled": True},
+                            "work_center": {
+                                "type": "nested",
+                                "properties": {
+                                    "id": {"type": "integer"},
+                                    "work_center": {"type": "keyword"},
+                                    "description": {"type": "text"},
+                                    "created_by": {"type": "integer"},
+                                    "modified_by": {"type": "integer"},
+                                    "created_at": {"type": "date"},
+                                    "updated_at": {"type": "date"},
+                                    "deleted_at": {"type": "date"},
+                                    "station": {"type": "object", "enabled": True},
+                                    "current_station": {
+                                        "type": "nested",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "work_center_id": {"type": "integer"},
+                                            "flag": {"type": "keyword"},
+                                            "station": {"type": "keyword"},
+                                            "is_start": {"type": "integer"},
+                                            "is_finish": {"type": "integer"},
+                                            "ip_address": {"type": "keyword"},
+                                            "server_printer": {"type": "keyword"},
+                                            "status_printer": {"type": "integer"},
+                                            "in_sequence": {"type": "integer"},
+                                            "with_integration": {"type": "object", "enabled": True},
+                                            "created_by": {"type": "integer"},
+                                            "modified_by": {"type": "integer"},
+                                            "created_at": {"type": "date"},
+                                            "updated_at": {"type": "date"},
+                                            "deleted_at": {"type": "date"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
                     "status": {"type": "object", "enabled": True},
                     "packing_boxes": {"type": "nested"},
-                    "crew": {"type": "object", "enabled": True}
+                    # "crew": {"type": "object", "enabled": True},
+                    "crews": {
+                        "type": "nested",
+                        "properties": {
+                            "id": {"type": "integer"},
+                            "product_work_center_id": {"type": "integer"},
+                            "station_id": {"type": "integer"},
+                            "user_id": {"type": "integer"},
+                            "plant_id": {"type": "integer"},
+                            "type": {"type": "integer"},
+                            "created_by": {"type": "integer"},
+                            "modified_by": {"type": "integer"},
+                            "created_at": {"type": "date"},
+                            "updated_at": {"type": "date"},
+                            "station": {"type": "object", "enabled": True},
+                            "user": {"type": "object", "enabled": True}
+                        }
+                    }
                 }
             }
         }
@@ -163,7 +236,7 @@ async def create_indices():
                     "status_id": {"type": "integer"},
                     "created_at": {"type": "date"},
                     "updated_at": {"type": "date"},
-                    "production_order_id": {"type": "integer"},
+                    # "production_order_id": {"type": "integer"},
                     "model": {"type": "object", "enabled": True},
                     "station": {"type": "object", "enabled": True},
                     "status": {"type": "object", "enabled": True}
@@ -229,10 +302,10 @@ async def create_production_order(order: ProductionOrderCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create production order: {str(e)}")
 
-@api_router.get("/elasticsearch/production-orders/{order_id}")
-async def get_production_order(order_id: int):
+@api_router.get("/elasticsearch/production-orders/{id}")
+async def get_production_order(id: int):
     try:
-        result = await es_client.get(index="production_orders_v1", id=order_id)
+        result = await es_client.get(index="production_orders_v1", id=id)
         return result["_source"]
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Production order not found: {str(e)}")
@@ -255,22 +328,22 @@ async def list_production_orders(size: int = 100):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list production orders: {str(e)}")
 
-@api_router.put("/elasticsearch/production-orders/{order_id}")
-async def update_production_order(order_id: int, order: ProductionOrderCreate):
+@api_router.put("/elasticsearch/production-orders/{id}")
+async def update_production_order(id: int, order: ProductionOrderCreate):
     try:
         result = await es_client.update(
             index="production_orders_v1",
-            id=order_id,
+            id=id,
             body={"doc": order.data}
         )
         return {"message": "Production order updated", "result": result["result"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update production order: {str(e)}")
 
-@api_router.delete("/elasticsearch/production-orders/{order_id}")
-async def delete_production_order(order_id: int):
+@api_router.delete("/elasticsearch/production-orders/{id}")
+async def delete_production_order(id: str):
     try:
-        result = await es_client.delete(index="production_orders_v1", id=order_id)
+        result = await es_client.delete(index="production_orders_v1", id=id)
         return {"message": "Production order deleted", "result": result["result"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete production order: {str(e)}")
@@ -282,16 +355,16 @@ async def create_traceability(trace: TraceabilityCreate):
         result = await es_client.index(
             index="traceabilities_v1",
             document=trace.data,
-            id=trace.data.get("id")
+            id=trace.data["model"].get("identity_number")
         )
         return {"message": "Traceability created", "id": result["_id"], "result": result["result"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create traceability: {str(e)}")
 
-@api_router.get("/elasticsearch/traceabilities/{trace_id}")
-async def get_traceability(trace_id: int):
+@api_router.get("/elasticsearch/traceabilities/{model_identity_number}")
+async def get_traceability(model_identity_number: str):
     try:
-        result = await es_client.get(index="traceabilities_v1", id=trace_id)
+        result = await es_client.get(index="traceabilities_v1", id=model_identity_number)
         return result["_source"]
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Traceability not found: {str(e)}")
@@ -320,16 +393,16 @@ async def create_nameplate(nameplate: NameplateCreate):
         result = await es_client.index(
             index="nameplates_v1",
             document=nameplate.data,
-            id=nameplate.data.get("id")
+            id=nameplate.data.get("identity_number")
         )
         return {"message": "Nameplate created", "id": result["_id"], "result": result["result"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create nameplate: {str(e)}")
 
-@api_router.get("/elasticsearch/nameplates/{nameplate_id}")
-async def get_nameplate(nameplate_id: int):
+@api_router.get("/elasticsearch/nameplates/{identity_number}")
+async def get_nameplate(identity_number: str):
     try:
-        result = await es_client.get(index="nameplates_v1", id=nameplate_id)
+        result = await es_client.get(index="nameplates_v1", id=identity_number)
         return result["_source"]
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Nameplate not found: {str(e)}")
@@ -337,10 +410,14 @@ async def get_nameplate(nameplate_id: int):
 @api_router.get("/elasticsearch/nameplates")
 async def list_nameplates(size: int = 100):
     try:
+        # return {"message": "hello world"}
         result = await es_client.search(
             index="nameplates_v1",
             body={
                 "query": {"match_all": {}},
+                "sort": [
+                    {"id": {"order": "desc", "missing": "_last"}}
+                ],
                 "size": size
             }
         )
@@ -354,6 +431,55 @@ async def list_nameplates(size: int = 100):
 # Search Endpoints
 @api_router.post("/elasticsearch/search")
 async def search(query: SearchQuery):
+    # try:
+    #     result = await es_client.search(
+    #         index="traceabilities_v1",
+    #         body={
+    #             "query": {
+    #                 "bool": {
+    #                     "should": [
+    #                         {
+    #                             "bool": {
+    #                                 "must": [
+    #                                     {"term": {"model_type.keyword": "App\\Models\\Nameplate"}},
+    #                                     *(
+    #                                         [{"term": {"model.flag.keyword": query.production_order_flag}}]
+    #                                         if getattr(query, "production_order_flag", None) else []
+    #                                     ),
+    #                                     *(
+    #                                         [{"term": {"model.production_order_id": query.production_order_id}}]
+    #                                         if getattr(query, "production_order_id", None) else []
+    #                                     )
+    #                                 ]
+    #                             }
+    #                         },
+    #                         {
+    #                             "bool": {
+    #                                 "must": [
+    #                                     {"term": {"model_type.keyword": "App\\Models\\ProductionOrder"}},
+    #                                     *(
+    #                                         [{"term": {"model.id": query.production_order_id}}]
+    #                                         if getattr(query, "production_order_id", None) else []
+    #                                     )
+    #                                 ]
+    #                             }
+    #                         }
+    #                     ],
+    #                     "minimum_should_match": 1
+    #                 }
+    #             },
+    #             "sort": [{"id": {"order": "desc"}}],
+    #             "size": query.size or 100
+    #         }
+    #     )
+
+    #     return {
+    #         "total": result["hits"]["total"]["value"],
+    #         "data": [hit["_source"] for hit in result["hits"]["hits"]]
+    #     }
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+    
     try:
         result = await es_client.search(
             index=query.index,
@@ -442,6 +568,149 @@ async def search_by_station(station_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
+# Search production_orders by shift-id
+@api_router.get("/elasticsearch/search/production-orders/by-shift/{shift_id}")
+async def search_by_shift(shift_id: int):
+    try:
+        result = await es_client.search(
+            index="production_orders_v1",
+            body={
+                "query": {
+                    "term": {
+                        "shift_id": shift_id
+                    }
+                }
+            }
+        )
+        
+        # return {
+        #     "total": result["hits"]["total"]["value"],
+        #     "data": [hit["_source"] for hit in result["hits"]["hits"]]
+        # }
+
+        return [hit["_source"] for hit in result["hits"]["hits"]]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+# Search Endpoints
+@api_router.post("/elasticsearch/production-orders/active")
+async def production_orders_active(query: ProductionOrderActive):
+    try:
+        planning_dates = query.planning_dates
+
+        if isinstance(planning_dates, list) and len(planning_dates) > 0:
+            planning_dates_sorted = sorted(planning_dates)
+            start_date = planning_dates_sorted[0]
+            end_date = planning_dates_sorted[-1]
+        elif isinstance(planning_dates, str):
+            start_date = end_date = planning_dates
+        else:
+            raise HTTPException(status_code=400, detail="planning_dates harus string atau list tanggal")
+
+        must_query = [
+            # ✅ Filter shift_id
+            {"term": {"shift_id": query.shift_id}},
+
+            # ✅ Filter planning_date (range Y-m-d)
+            {
+                "range": {
+                    "planning_date": {
+                        "gte": start_date,
+                        "lte": end_date,
+                        "format": "yyyy-MM-dd"
+                    }
+                }
+            }
+        ]
+
+        # ✅ Filter crew.user_id (nested field)
+        if getattr(query, "user_id", None):
+            must_query.append({
+                "nested": {
+                    "path": "crews",
+                    "query": {"term": {"crews.user_id": query.user_id}}
+                }
+            })
+
+        result = await es_client.search(
+            index="production_orders_v1",
+            body={
+                "query": {
+                    "bool": {
+                        "must": must_query,
+                        "filter": [
+                            {
+                                "terms": {
+                                    "status.flag.keyword": ["ORDER_NEW", "ORDER_PROGRESS"]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "sort": [{"id": {"order": "asc"}}],
+                "size": query.size
+            }
+        )
+
+        # ✅ Filter product_work_center.work_center.current_station.flag (nested field)
+        if getattr(query, "station_flag", None):
+            production_orders = []
+            for hit in result["hits"]["hits"]:
+                src = hit["_source"]
+
+                # ✅ kalau ada product_work_center & current_station
+                work_center = (
+                    src.get("product_work_center", {})
+                    .get("work_center", {})
+                )
+
+                if "current_station" in work_center and isinstance(work_center["current_station"], list):
+                    # Filter manual di Python
+                    filtered_station = [
+                        s for s in work_center["current_station"]
+                        if s.get("flag") == query.station_flag
+                    ]
+                    work_center["current_station"] = filtered_station
+
+                production_orders.append(src)
+            
+            result = production_orders
+        else:
+            result = [hit["_source"] for hit in result["hits"]["hits"]]
+
+        return result
+
+        # return {
+        #     "total": result["hits"]["total"]["value"],
+        #     "data": [hit["_source"] for hit in result["hits"]["hits"]]
+        # }
+        # return [hit["_source"] for hit in result["hits"]["hits"]]
+
+        # 🔧 Filter hasil agar current_station hanya berisi yang match inner_hits
+        # production_orders = []
+        # for hit in result["hits"]["hits"]:
+        #     source = hit["_source"]
+            
+        #     # Ambil hasil inner_hits (kalau ada)
+        #     inner_hits = (
+        #         hit.get("inner_hits", {})
+        #             .get("filtered_current_station", {})
+        #             .get("hits", {})
+        #             .get("hits", [])
+        #     )
+
+        #     # Kalau inner_hits ada, masukkan ke current_station
+        #     if inner_hits:
+        #         current_stations = [i["_source"] for i in inner_hits]
+        #         if "product_work_center" in source and "work_center" in source["product_work_center"]:
+        #             source["product_work_center"]["work_center"]["current_station"] = current_stations
+
+        #     production_orders.append(source)
+
+        # return production_orders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
 # Include the router in the main app
 app.include_router(api_router)
 
@@ -460,7 +729,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
-    await es_client.close()
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # --- startup logic ---
+#     print("🚀 Starting up FastAPI...")
+    
+#     yield  # <<< di sini app berjalan
+    
+#     # --- shutdown logic ---
+#     print("🛑 Shutting down...")
+#     client.close()
+#     await es_client.close()
+
+# app = FastAPI(lifespan=lifespan)

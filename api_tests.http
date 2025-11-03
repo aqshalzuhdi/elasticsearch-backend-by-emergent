@@ -1,7 +1,7 @@
 # Elasticsearch API Tests for Visual Studio Code REST Client
 # Install the REST Client extension to use this file
 
-@baseUrl = http://localhost:8001/api
+@baseUrl = http://localhost:8010/api
 
 ### Health Check
 GET {{baseUrl}}/
@@ -80,13 +80,14 @@ Content-Type: application/json
         "status": {
             "id": 4,
             "flag": "ORDER_PROGRESS",
-            "status": "ON PROGRESS"
+            "status": "ON PROGRESS",
+            "bg_color": "#fd7e14"
         }
     }
 }
 
 ### Get Production Order by ID
-GET {{baseUrl}}/elasticsearch/production-orders/90
+GET {{baseUrl}}/elasticsearch/production-orders/107
 
 ### List All Production Orders
 GET {{baseUrl}}/elasticsearch/production-orders?size=100
@@ -124,9 +125,29 @@ Content-Type: application/json
             "tool_id": 3
         },
         "status_id": 1,
-        "production_order_id": 90,
+        "production_order_id": 103,
         "created_at": "2025-10-30T08:49:41.000000Z",
         "updated_at": "2025-10-30T08:49:41.000000Z",
+        "model": {
+            "id": 620,
+            "flag": "WH",
+            "production_order_id": 103,
+            "identity_number": "PR;2251031001-0004",
+            "shift_id": 2,
+            "user_id": 9,
+            "product_work_center_id": 6,
+            "station_id": 10,
+            "created_at": "2025-10-31T06:49:55.000000Z",
+            "updated_at": "2025-10-31T06:49:55.000000Z",
+            "production_order": {
+            },
+            "shift": {
+            },
+            "product_work_center": {
+            },
+            "station": {
+            }
+        },
         "station": {
             "id": 12,
             "work_center_id": 3,
@@ -141,8 +162,8 @@ Content-Type: application/json
     }
 }
 
-### Get Traceability by ID
-GET {{baseUrl}}/elasticsearch/traceabilities/835
+### Get Traceability by model_identity_number
+GET {{baseUrl}}/elasticsearch/traceabilities/PR;2251101001-0011
 
 ### List All Traceabilities
 GET {{baseUrl}}/elasticsearch/traceabilities?size=100
@@ -170,11 +191,11 @@ Content-Type: application/json
     }
 }
 
-### Get Nameplate by ID
-GET {{baseUrl}}/elasticsearch/nameplates/607
+### Get Nameplate by identity_number
+GET {{baseUrl}}/elasticsearch/nameplates/PR;2251031001-0002
 
 ### List All Nameplates
-GET {{baseUrl}}/elasticsearch/nameplates?size=100
+GET {{baseUrl}}/elasticsearch/nameplates?size=10
 
 ### ========================================
 ### SEARCH OPERATIONS
@@ -191,13 +212,28 @@ Content-Type: application/json
 }
 
 ### Search by Identity Number
-GET {{baseUrl}}/elasticsearch/search/production-orders/by-identity/2251030001
+GET {{baseUrl}}/elasticsearch/search/production-orders/by-identity/2251101001
 
 ### Search by Customer ID
 GET {{baseUrl}}/elasticsearch/search/production-orders/by-customer/65
 
 ### Search by Station ID (Nested Query)
 GET {{baseUrl}}/elasticsearch/search/production-orders/by-station/12
+
+### Search by Shift ID
+GET {{baseUrl}}/elasticsearch/search/production-orders/by-shift/2
+
+### List active Production Orders [user_id is optional]
+POST {{baseUrl}}/elasticsearch/production-orders/active
+Content-Type: application/json
+
+{
+    "shift_id": 2,
+    "user_id": 9,
+    "station_flag": "WH_WASUREMBO",
+    "planning_dates": ["2025-11-03", "2025-11-03"],
+    "size": 10
+}
 
 ### Search in Traceabilities Index
 POST {{baseUrl}}/elasticsearch/search
@@ -208,6 +244,13 @@ Content-Type: application/json
     "index": "traceabilities_v1",
     "size": 10
 }
+
+# {
+#     "query": "traceabilities_v1",
+#     "production_order_id": 104,
+#     "production_order_flag": "WH",
+#     "size": 50
+# }
 
 ### Search in Nameplates Index
 POST {{baseUrl}}/elasticsearch/search
